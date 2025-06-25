@@ -122,8 +122,7 @@ class AmoCRMClient:
 
     async def get_events(self, last_timestamp: int, current_timestamp: int):
         params = {
-            'filter[type][0]': 'lead_status_changed',
-            'filter[type][1]': 'custom_field_value_changed',
+            'filter[type]': 'lead_status_changed',
             'filter[value_after][leads_statuses][0][pipeline_id]': os.getenv('pipeline_astana'),
             'filter[value_after][leads_statuses][0][status_id]': os.getenv('status_astana'),
             'filter[value_after][leads_statuses][1][pipeline_id]': os.getenv('pipeline_almaty'),

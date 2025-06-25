@@ -199,6 +199,7 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
                     pass
                 except Exception as e:
                     logger.error(f"Ошибка при обработке сделки: {e}")
+        # update_leads(timestamp, curr_timestamp)
     except:
         pass
     finally:
