@@ -235,7 +235,7 @@ class Lead:
                     case "ФИО родителя":
                         self.parent.name = self.__get_value_from_json(field)
 
-                    case "Дата 1 транша":
+                    case "Дата оплаты":
                         date = self.__get_value_from_json(field)
                         if date != "":
                             date = (
