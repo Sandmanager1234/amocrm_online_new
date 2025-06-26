@@ -180,7 +180,7 @@ async def update_leads(timestamp: int, curr_timestamp: int):
 async def polling_leads(timestamp: int, curr_timestamp: int):
     amo_client.start_session()
     try:
-        response = await amo_client.get_events(timestamp)
+        response = await amo_client.get_events(timestamp, curr_timestamp)
         events_json = response.get('_embedded', {}).get('events', {})
         if events_json:
             for event_json in events_json:
