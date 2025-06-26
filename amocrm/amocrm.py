@@ -134,6 +134,15 @@ class AmoCRMClient:
             
         }
         return await self._make_request("GET", '/api/v4/events', params=params)
+    
+    async def get_autobuy_events(self, last_timestamp: int, current_timestamp: int):
+        params = {
+            'filter[type]': 'custom_field_803215_value_changed',
+            'filter[created_at][from]': last_timestamp,
+            'filter[created_at][to]': current_timestamp
+            
+        }
+        return await self._make_request("GET", '/api/v4/events', params=params)
 
     async def get_lead(self, id: int) -> Dict[Any, Any]:
         """Получение информации о сделке по `id`"""
@@ -154,14 +163,15 @@ class AmoCRMClient:
             'filter[status_id][0]': os.getenv('status_online'),
             'filter[updated_at][from]': last_timestamp,
             'filter[updated_at][to]': current_timestamp
-        }
+    }
         return await self._make_request('GET', f'/api/v4/leads', params=params)
     
-    async def get_update_events(self, last_timestamp: int, current_timestamp: int):
+    async def get_update_events(self, last_timestamp: int, current_timestamp: int, page: int = 1):
         params = {
             'filter[type]': 'custom_field_value_changed',
             'filter[updated_at][from]': last_timestamp,
-            'filter[updated_at][to]': current_timestamp
+            'filter[updated_at][to]': current_timestamp,
+            'page': page
         }
         return await self._make_request('GET', f'/api/v4/events', params=params)
     

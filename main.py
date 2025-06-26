@@ -114,14 +114,14 @@ def send_to_google(lead: Lead):
         lead.learning_time,
         lead.branch,
         lead.learner.profile_subjects,
+        lead.payment.expected_amount,
         lead.payment.amount,
         lead.payment.credit,
         lead.payment.credit2,
         lead.payment.credit3,
         lead.payment.credit4,
-        lead.payment.method,
         lead.payment.debt,
-        lead.payment.expected_amount,
+        lead.payment.method,
         lead.base_course,
         lead.intensive_cource,
         lead.summer_camp,
@@ -150,6 +150,14 @@ async def update_leads(timestamp: int, curr_timestamp: int):
         leads_response = await amo_client.get_updated_leads(timestamp, curr_timestamp)
         event_response = await amo_client.get_update_events(timestamp, curr_timestamp)
         events_json = event_response.get('_embedded', {}).get('events', {})
+        next_page = event_response.get('_links', {}).get('next', {}).get('href')
+        page = 2
+        if next_page:
+            while next_page:
+                next_response = await amo_client.get_update_events(timestamp, curr_timestamp, page=page)
+                events_json.extend(next_response.get('_embedded', {}).get('events', []))
+                next_page = next_response.get('_links', {}).get('next', {}).get('href')
+                page += 1
         events = {}
         for event_json in events_json:
             if event_json.get('entity_id') not in events:
@@ -160,16 +168,17 @@ async def update_leads(timestamp: int, curr_timestamp: int):
             for lead_json in leads_json:
                 try:
                     lead = Lead.from_json(lead_json) 
-                    if lead.manager.id:
-                        lead.manager.set_name(await amo_client.get_user(lead.manager.id))
-                    if lead.parent.id:
-                        lead.parent.set_email(await amo_client.get_contact(lead.parent.id))
-                    if lead.id in events:
-                        field_ids = events.get(lead.id, [])
-                        for field_id in field_ids:
-                            if field_id in UPDATED_FIELDS:
-                                send_to_google(lead)
-                                break
+                    if ('Автосделка' in lead.name and lead.prodlenie) or ('Автосделка' not in lead.name):
+                        if lead.manager.id:
+                            lead.manager.set_name(await amo_client.get_user(lead.manager.id))
+                        if lead.parent.id:
+                            lead.parent.set_email(await amo_client.get_contact(lead.parent.id))
+                        if lead.id in events:
+                            field_ids = events.get(lead.id, [])
+                            for field_id in field_ids:
+                                if field_id in UPDATED_FIELDS:
+                                    send_to_google(lead)
+                                    break
                 except Exception as e:
                     logger.error(f'Ошибка при обновлении сделки: {e}')
     except Exception as ex:
@@ -181,7 +190,9 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
     amo_client.start_session()
     try:
         response = await amo_client.get_events(timestamp, curr_timestamp)
-        events_json = response.get('_embedded', {}).get('events', {})
+        response_autobuy = await amo_client.get_autobuy_events(timestamp, curr_timestamp)
+        events_json = response.get('_embedded', {}).get('events', [])
+        events_json.extend(response_autobuy.get('_embedded', {}).get('events', []))
         if events_json:
             for event_json in events_json:
                 try:
@@ -195,9 +206,11 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
                     await send_to_telegram(lead)
 
                     send_to_google(lead)
+                except BranchIsNotOnline:
+                    ...
                 except Exception as e:
                     logger.error(f"Ошибка при обработке сделки: {e}")
-        # update_leads(timestamp, curr_timestamp)
+
     except Exception as e:
         logger.error(f"Ошибка при получении событий: {e}")
     finally:
@@ -210,8 +223,10 @@ async def main():
     logger.info(f"Бот[{bot_info.id}] @{bot_info.username}")
     while True:
         try:
+            start_ts = int((datetime.now().timestamp()))
             await scheduler.start()
             await asyncio.sleep(600)
+            await update_leads(start_ts, int(datetime.now().timestamp()))
         except Exception as ex:
             print(ex)
         finally:

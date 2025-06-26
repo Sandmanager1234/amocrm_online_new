@@ -132,6 +132,7 @@ class Lead:
         :param id: Идентификатор заказа
         """
         self.id = id  # Уникальный идентификатор заказа
+        self.name: str = ""
 
         # Ученик
         self.learner: Learner = Learner()
@@ -161,6 +162,7 @@ class Lead:
         self.intensive_cource = ""
         self.summer_camp = ""
         self.status: str = ""  # Статус лида
+        self.prodlenie: bool = False  # Флаг продления
 
     def __get_value_from_json(self, field: dict, _all: bool = False) -> str:
         """Приватный метод для получения значения из JSON"""
@@ -192,6 +194,7 @@ class Lead:
         """Обрабатывает вкладку `Основное` в сделке."""
         try:
             self: Lead = cls(data.get("id", ""))
+            self.name =  data.get("name", "")
             self.manager.id = data.get("responsible_user_id", None)
             self.telegram_chat.set_chat_id(data.get('pipeline_id', -1))
 
@@ -314,6 +317,8 @@ class Lead:
                         self.payment.debt = self.__get_value_from_json(field)
                     case "Ожидаемая сумма":
                         self.payment.expected_amount = self.__get_value_from_json(field)
+                    case "готово к продлению":
+                        self.prodlenie = self.__get_value_from_json(field)
                     case _:
                         pass
             # ОШИБКИ ОБРАБОТКИ
