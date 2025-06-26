@@ -149,7 +149,7 @@ async def update_leads(timestamp: int, curr_timestamp: int):
     try:
         leads_response = await amo_client.get_updated_leads(timestamp, curr_timestamp)
         event_response = await amo_client.get_update_events(timestamp, curr_timestamp)
-        events_json = event_response.get('_embedded', {}).get('events', {})
+        events_json = event_response.get('_embedded', {}).get('events', [])
         next_page = event_response.get('_links', {}).get('next', {}).get('href')
         page = 2
         if next_page:
