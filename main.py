@@ -103,7 +103,7 @@ async def send_to_telegram(lead: Lead):
 def send_to_google(lead: Lead):
     data_insert = [
         datetime.now().strftime("%Y.%m.%d %H:%M:%S"),
-        datetime.strptime(lead.payment.date, "%Y-%m-%d").strftime("%Y.%m.%d"),
+        datetime.strptime(lead.payment.date, "%Y-%m-%d").strftime("%Y.%m.%d") if lead.payment.date else "",
         lead.city,
         lead.manager.name,
         lead.pp_manager.name,
