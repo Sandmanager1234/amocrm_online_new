@@ -375,9 +375,9 @@ class Event:
             self.after_pipeline_id = data.get(
                 'value_after', [{}]
             )[0].get(
-                'lead_status'
+                'lead_status', {}
             ).get(
-                'pipeline_id'
+                'pipeline_id', ''
             )
             return self
         except Exception as e:
