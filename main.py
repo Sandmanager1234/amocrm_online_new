@@ -195,13 +195,11 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
                     await send_to_telegram(lead)
 
                     send_to_google(lead)
-                except BranchIsNotOnline:
-                    pass
                 except Exception as e:
                     logger.error(f"Ошибка при обработке сделки: {e}")
         # update_leads(timestamp, curr_timestamp)
-    except:
-        pass
+    except Exception as e:
+        logger.error(f"Ошибка при получении событий: {e}")
     finally:
         await amo_client.close_session()
 
