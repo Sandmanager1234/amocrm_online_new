@@ -155,6 +155,7 @@ async def update_leads(timestamp: int, curr_timestamp: int):
         page = 2
         if next_page:
             while next_page:
+                print(next_page)
                 next_response = await amo_client.get_update_events(timestamp, curr_timestamp, page=page)
                 events_json.extend(next_response.get('_embedded', {}).get('events', []))
                 next_page = next_response.get('_links', {}).get('next', {}).get('href')
@@ -233,6 +234,9 @@ async def main():
             print(ex)
         finally:
             await scheduler.stop()
+    # start_ts = int((datetime.now().timestamp()))
+    # print(start_ts)
+    # await update_leads(start_ts, start_ts + 5)
 
 
 # Запуск приложения

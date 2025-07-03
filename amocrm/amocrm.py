@@ -169,8 +169,8 @@ class AmoCRMClient:
     async def get_update_events(self, last_timestamp: int, current_timestamp: int, page: int = 1):
         params = {
             'filter[type]': 'custom_field_value_changed',
-            'filter[updated_at][from]': last_timestamp,
-            'filter[updated_at][to]': current_timestamp,
+            'filter[created_at][from]': last_timestamp,
+            'filter[created_at][to]': current_timestamp,
             'page': page
         }
         return await self._make_request('GET', f'/api/v4/events', params=params)
