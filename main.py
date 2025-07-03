@@ -147,46 +147,48 @@ def send_to_google(lead: Lead):
 
 async def update_leads(timestamp: int, curr_timestamp: int):
     amo_client.start_session()
-    try:
-        leads_response = await amo_client.get_updated_leads(timestamp, curr_timestamp)
-        event_response = await amo_client.get_update_events(timestamp, curr_timestamp)
-        events_json = event_response.get('_embedded', {}).get('events', [])
-        next_page = event_response.get('_links', {}).get('next', {}).get('href')
-        page = 2
-        if next_page:
-            while next_page:
-                print(next_page)
-                next_response = await amo_client.get_update_events(timestamp, curr_timestamp, page=page)
-                events_json.extend(next_response.get('_embedded', {}).get('events', []))
-                next_page = next_response.get('_links', {}).get('next', {}).get('href')
-                page += 1
-        events = {}
-        for event_json in events_json:
-            if event_json.get('entity_id') not in events:
-                events[event_json.get('entity_id')] = []
-            events[event_json.get('entity_id')].append(event_json.get('value_after', [{}])[0].get('custom_field_value', {}).get('field_id'))
-        leads_json = leads_response.get('_embedded', {}).get('leads', {})
-        if leads_json:
-            for lead_json in leads_json:
-                try:
-                    lead = Lead.from_json(lead_json) 
-                    if ('Автосделка' in lead.name and lead.prodlenie) or ('Автосделка' not in lead.name):
-                        if lead.manager.id:
-                            lead.manager.set_name(await amo_client.get_user(lead.manager.id))
-                        if lead.parent.id:
-                            lead.parent.set_email(await amo_client.get_contact(lead.parent.id))
-                        if lead.id in events:
-                            field_ids = events.get(lead.id, [])
-                            for field_id in field_ids:
-                                if field_id in UPDATED_FIELDS:
-                                    send_to_google(lead)
-                                    break
-                except Exception as e:
-                    logger.error(f'Ошибка при обновлении сделки: {e}')
-    except Exception as ex:
-        logger.error(f'Ошибка при запросе обновлении сделок: {ex}')
-    finally:
-        await amo_client.close_session()
+    # try:
+    leads_response = await amo_client.get_updated_leads(timestamp, curr_timestamp)
+    event_response = await amo_client.get_update_events(timestamp, curr_timestamp)
+    events_json = event_response.get('_embedded', {}).get('events', [])
+    next_page = event_response.get('_links', {}).get('next', {}).get('href')
+    page = 2
+    if next_page:
+        while next_page:
+            print(next_page)
+            next_response = await amo_client.get_update_events(timestamp, curr_timestamp, page=page)
+            events_json.extend(next_response.get('_embedded', {}).get('events', []))
+            next_page = next_response.get('_links', {}).get('next', {}).get('href')
+            page += 1
+    events = {}
+    for event_json in events_json:
+        if event_json.get('entity_id') not in events:
+            events[event_json.get('entity_id')] = []
+        field_id = int(event_json.get('type', 'custom_field_0').split('_')[2])
+        events[event_json.get('entity_id')].append(field_id)
+    leads_json = leads_response.get('_embedded', {}).get('leads', {})
+    if leads_json:
+        for lead_json in leads_json:
+            try:
+                lead = Lead.from_json(lead_json) 
+                if ('Автосделка' in lead.name and lead.prodlenie) or ('Автосделка' not in lead.name):
+                    if lead.manager.id:
+                        lead.manager.set_name(await amo_client.get_user(lead.manager.id))
+                    if lead.parent.id:
+                        lead.parent.set_email(await amo_client.get_contact(lead.parent.id))
+                    if lead.id in events:
+                        field_ids = events.get(lead.id, [])
+                        for field_id in field_ids:
+                            if field_id in UPDATED_FIELDS:
+                                # send_to_google(lead)
+                                logger.info('ушло в гугл')
+                                break
+            except Exception as e:
+                logger.error(f'Ошибка при обновлении сделки: {e}')
+    # except Exception as ex:
+    #     logger.error(f'Ошибка при запросе обновлении сделок: {ex}')
+    # finally:
+    await amo_client.close_session()
 
 
 async def polling_leads(timestamp: int, curr_timestamp: int):
@@ -195,6 +197,7 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
         response = await amo_client.get_events(timestamp, curr_timestamp)
         response_autobuy = await amo_client.get_autobuy_events(timestamp, curr_timestamp)
         events_json = response.get('_embedded', {}).get('events', [])
+
         events_json.extend(response_autobuy.get('_embedded', {}).get('events', []))
         if events_json:
             for event_json in events_json:
@@ -221,22 +224,23 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
 
 
 async def main():
-    scheduler = Scheduler(polling_leads, SECONDS)
-    bot_info = await bot.get_me()
-    logger.info(f"Бот[{bot_info.id}] @{bot_info.username}")
+    # scheduler = Scheduler(polling_leads, 10)
+    # # bot_info = await bot.get_me()
+    # # logger.info(f"Бот[{bot_info.id}] @{bot_info.username}")
     while True:
         try:
             start_ts = int((datetime.now().timestamp()))
-            await scheduler.start()
-            await asyncio.sleep(600)
+            # await scheduler.start()
+            await asyncio.sleep(5)
             await update_leads(start_ts, int(datetime.now().timestamp()))
         except Exception as ex:
             print(ex)
         finally:
-            await scheduler.stop()
+            # await scheduler.stop()
+            pass
     # start_ts = int((datetime.now().timestamp()))
     # print(start_ts)
-    # await update_leads(start_ts, start_ts + 5)
+    # await update_leads(1751550610, 1751550615)
 
 
 # Запуск приложения
