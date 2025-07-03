@@ -146,6 +146,7 @@ def send_to_google(lead: Lead):
 
 
 async def update_leads(timestamp: int, curr_timestamp: int):
+    amo_client.start_session()
     try:
         leads_response = await amo_client.get_updated_leads(timestamp, curr_timestamp)
         event_response = await amo_client.get_update_events(timestamp, curr_timestamp)
@@ -183,7 +184,8 @@ async def update_leads(timestamp: int, curr_timestamp: int):
                     logger.error(f'Ошибка при обновлении сделки: {e}')
     except Exception as ex:
         logger.error(f'Ошибка при запросе обновлении сделок: {ex}')
-    pass
+    finally:
+        await amo_client.close_session()
 
 
 async def polling_leads(timestamp: int, curr_timestamp: int):
