@@ -1,4 +1,5 @@
 import os
+import traceback
 import asyncio
 from amocrm import AmoCRMClient
 from amocrm.models import Lead, BranchIsNotOnline, Event
@@ -146,7 +147,6 @@ def send_to_google(lead: Lead):
 
 
 async def update_leads(timestamp: int, curr_timestamp: int):
-    amo_client.start_session()
     try:
         leads_response = await amo_client.get_updated_leads(timestamp, curr_timestamp)
         event_response = await amo_client.get_update_events(timestamp, curr_timestamp)
@@ -180,19 +180,18 @@ async def update_leads(timestamp: int, curr_timestamp: int):
                             field_ids = events.get(lead.id, [])
                             for field_id in field_ids:
                                 if field_id in UPDATED_FIELDS:
-                                    # send_to_google(lead)
-                                    logger.info('ушло в гугл')
+                                    send_to_google(lead)
+                                    # logger.info('ушло в гугл')
                                     break
                 except Exception as e:
-                    logger.error(f'Ошибка при обновлении сделки: {e}')
+                    logger.error(f'Ошибка при обновлении сделки: {traceback.print_exc()}')
     except Exception as ex:
-        logger.error(f'Ошибка при запросе обновлении сделок: {ex}')
-    finally:
-        await amo_client.close_session()
+        logger.error(f'Ошибка при запросе обновлении сделок: {traceback.print_exc()}')
+
 
 
 async def polling_leads(timestamp: int, curr_timestamp: int):
-    amo_client.start_session()
+    # amo_client.start_session()
     try:
         response = await amo_client.get_events(timestamp, curr_timestamp)
         response_autobuy = await amo_client.get_autobuy_events(timestamp, curr_timestamp)
@@ -210,34 +209,31 @@ async def polling_leads(timestamp: int, curr_timestamp: int):
                         if lead.parent.id:
                             lead.parent.set_email(await amo_client.get_contact(lead.parent.id))
                     await send_to_telegram(lead)
-
                     send_to_google(lead)
                 except BranchIsNotOnline:
                     ...
                 except Exception as e:
                     logger.error(f"Ошибка при обработке сделки: {e}")
-
     except Exception as e:
-        logger.error(f"Ошибка при получении событий: {e}")
-    finally:
-        await amo_client.close_session()
+        logger.error(f"Ошибка при получении событий: {traceback.print_exc()}")
 
 
 async def main():
-    scheduler = Scheduler(polling_leads, SECONDS)
-    bot_info = await bot.get_me()
-    logger.info(f"Бот[{bot_info.id}] @{bot_info.username}")
+    scheduler = Scheduler(polling_leads, 15)
+    # bot_info = await bot.get_me()
+    # logger.info(f"Бот[{bot_info.id}] @{bot_info.username}")
     while True:
+        amo_client.start_session()  
         try:
             start_ts = int((datetime.now().timestamp()))
             await scheduler.start()
             await asyncio.sleep(600)
             await update_leads(start_ts, int(datetime.now().timestamp()))
         except Exception as ex:
-            print(ex)
+            print(traceback.print_exc())
         finally:
             await scheduler.stop()
-            pass
+        await amo_client.close_session()
     # start_ts = int((datetime.now().timestamp()))
     # print(start_ts)
     # await update_leads(1751550610, 1751550615)
